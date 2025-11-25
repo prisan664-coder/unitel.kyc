@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="lo">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eKYC - Unitel</title>
+    <!-- Load Tailwind CSS for modern styling and responsiveness -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'unitel-orange': '#ff6600',
+                        'unitel-dark-orange': '#e65c00',
+                        'unitel-grey': '#f7f7f7',
+                        'success-light': '#e6ffe6', /* Light green for status bar */
+                        'success-dark': '#4CAF50',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for the phone graphic and animation */
+        .phone-graphic-container {
+            position: relative;
+            width: 150px;
+            height: 200px;
+            margin: 30px auto;
+        }
+
+        .phone-graphic {
+            width: 100px;
+            height: 180px;
+            border: 4px solid #333;
+            border-radius: 20px;
+            background-color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .unitel-logo {
+            font-weight: bold;
+            color: #ff6600;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .screen-display {
+            background-color: #f0f0f0;
+            padding: 5px;
+            margin: 15px auto 0;
+            width: 80%;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #333;
+            font-size: 10px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            padding: 10px;
+            width: 80px;
+            margin: 10px auto 0;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        .key {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            height: 15px;
+            border-radius: 3px;
+        }
+
+        /* Orange Rings Animation */
+        .ring-animation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            border: 3px solid rgba(255, 102, 0, 0.5);
+            border-radius: 50%;
+            box-sizing: border-box;
+            animation: pulse 2s infinite ease-out;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* Responsive Input Field for OTP */
+        .otp-input-field {
+            letter-spacing: 15px;
+            text-align: center;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+            width: 350px;
+            text-align: center;
+        }
+
+        /* Styles for Data Display Step */
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-label {
+            text-align: left;
+            font-size: 14px;
+            color: #555;
+            flex: 1;
+        }
+
+        .data-value {
+            text-align: right;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            flex: 1.5;
+            white-space: normal;
+        }
+
+        .data-header {
+            background-color: #ff6600;
+            color: white;
+            padding: 15px 20px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+
+        .data-container {
+            padding-top: 60px;
+            /* Space for the fixed header */
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body class="bg-unitel-grey flex items-start justify-center min-h-screen">
+
+    <!-- Main Wrapper for the new fixed header layout -->
+    <div class="relative w-full max-w-lg mx-auto bg-white min-h-screen shadow-xl">
+
+        <!-- Fixed Orange Header for Data Display -->
+        <div id="data-header" class="data-header hidden">
+            <button onclick="showModal('กลับหน้าเดิม', 'คุณสามารถใช้ปุ่มลูกศรเพื่อกลับไปหน้า OTP ได้')"
+                class="text-white text-2xl p-2">
+                &leftarrow;
+            </button>
+            <div class="text-lg font-bold">
+                eKYC
+            </div>
+            <!-- Placeholder for Laos Flag -->
+            <img src="https://placehold.co/30x20/F00/FFF?text=LA" alt="Laos Flag"
+                class="rounded border border-gray-300">
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="p-6 sm:p-10 w-full" id="main-content-area">
+
+            <!-- Step 1 & 2 Container (Centered) -->
+            <div id="auth-steps-container"
+                class="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] text-center">
+                <!-- Header: Logo and Flag -->
+                <div class="flex justify-between items-center mb-6 w-full max-w-sm">
+                    <div class="text-2xl font-extrabold text-unitel-orange">e<span class="text-black">KYC</span></div>
+                    <!-- Placeholder for Laos Flag -->
+                    <img src="https://placehold.co/30x20/F00/FFF?text=LA" alt="Laos Flag"
+                        class="rounded border border-gray-300">
+                </div>
+
+                <!-- Phone Graphic and Animation -->
+                <div class="phone-graphic-container">
+                    <div class="ring-animation"></div>
+                    <div class="phone-graphic">
+                        <div class="unitel-logo">unitel.</div>
+                        <div id="phone-display" class="screen-display">020 XXX XXXX</div>
+                        <div class="keypad">
+                            <div class="key"></div>
+                            <div class="key"></div>
+                            <div class="key"></div>
+                            <div class="key"></div>
+                            <div class="key"></div>
+                            <div class="key"></div>
+                            <div class="key"></div>
+                            <div class="key"></div>
+                            <div class="key"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Phone Number Input -->
+                <div id="step-phone" class="step w-full max-w-sm">
+                    <h1 class="text-xl font-bold mt-8 mb-2">ເຂົ້າສູ່ລະບົບດ້ວຍເບີມືຖື</h1>
+                    <p class="text-sm text-gray-600 mb-6">
+                        ປ້ອນເລກໂທລະສັບຂອງທ່ານ ພວກເຮົາຈະສົ່ງ OTP ສຳຫລັບການຢືນຢັນ
+                    </p>
+
+                    <input type="tel" id="phone-number-input"
+                        class="w-full p-3 mb-6 border border-gray-300 rounded-md text-lg text-center"
+                        placeholder="ປ້ອນເບີໂທລະສັບ (8 ຕົວເລກ)" maxlength="8">
+
+                    <p class="text-sm text-unitel-orange mb-6 font-medium">
+                        ຕ້ອງໃສ່ເບີໂທລະສັບ
+                    </p>
+
+                    <button onclick="goToOtpStep()"
+                        class="button-submit bg-unitel-orange hover:bg-unitel-dark-orange text-white p-3 rounded-md font-bold w-full transition duration-200">
+                        ຕໍ່ໄປ
+                    </button>
+                </div>
+
+                <!-- Step 2: OTP Input (Initially Hidden) -->
+                <div id="step-otp" class="step hidden w-full max-w-sm">
+                    <h1 class="text-xl font-bold mt-8 mb-2">ປ້ອນລະຫັດທີ່ໄດ້ຮັບ</h1>
+                    <p id="otp-instruction" class="text-sm text-gray-600 mb-6">
+                        ປ້ອນລະຫັດ 6 ຕົວທີ່ສົ່ງໄປທີ່ 020...
+                    </p>
+
+                    <input type="text" id="otp-input"
+                        class="otp-input-field w-full p-3 mb-4 border border-gray-300 rounded-md text-xl"
+                        placeholder="000 000" maxlength="6">
+
+                    <div class="flex justify-center items-center space-x-2 mb-6 text-sm">
+                        <span id="countdown-timer" class="text-gray-500"></span>
+                        <a href="#" onclick="resendOtp(event)" id="resend-link"
+                            class="text-unitel-orange font-medium hidden">
+                            ຂໍລະຫັດໃໝ່ໄດ້ຢູ່ບ່ອນນີ້
+                        </a>
+                    </div>
+
+                    <button onclick="verifyOtp()"
+                        class="button-submit bg-unitel-orange hover:bg-unitel-dark-orange text-white p-3 rounded-md font-bold w-full transition duration-200">
+                        ຢືນຢັນ
+                    </button>
+                </div>
+
+                <!-- Help Link (Common to step 1 & 2) -->
+                <a href="#" class="text-blue-500 hover:text-blue-700 text-sm mt-8 block w-full max-w-sm">
+                    ຕ້ອງການການຊ່ວຍເຫຼືອ
+                </a>
+            </div>
+
+            <!-- Step 3: Data Display (Initially Hidden) -->
+            <div id="step-data-display" class="data-container hidden p-4 sm:p-0 pt-10">
+                <!-- Status Bar: "ສະຖານະ: ຢືນຢັນແລ້ວ" (Status: Confirmed) -->
+                <div
+                    class="flex items-center bg-success-light text-success-dark p-3 rounded-lg font-bold mb-8 shadow-sm">
+                    <!-- Icon SVG: Checkmark -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <span>ສະຖານະ: ຢືນຢັນແລ້ວ</span>
+                </div>
+
+                <h2 class="text-lg font-bold text-gray-800 mb-4">ຂໍ້ມູນລູກຄ້າ</h2>
+
+                <!-- Data Display Rows Container -->
+                <div id="user-data-list" class="mb-8">
+                    <!-- Rows will be injected here by JavaScript -->
+                </div>
+
+                <!-- "ເບິ່ງເພີ່ມເຕີມ" (View More/Details) -->
+                <p class="text-sm text-unitel-orange text-center mb-10 cursor-pointer font-medium">
+                    ເບິ່ງເພີ່ມເຕີມ
+                </p>
+
+                <!-- Action Buttons -->
+                <div class="space-y-4">
+                    <button
+                        class="bg-gray-300 text-gray-700 py-3 rounded-md font-bold w-full transition duration-200 hover:bg-gray-400">
+                        ປ່ຽນປະເພດ (Change Type)
+                    </button>
+                    <button
+                        class="bg-unitel-orange text-white py-3 rounded-md font-bold w-full transition duration-200 hover:bg-unitel-dark-orange">
+                        <span class="mr-2">&#x1F4F1;</span> ລົງທະບຽນ eKYC (Register eKYC)
+                    </button>
+                    <button
+                        class="bg-white text-unitel-orange border-2 border-unitel-orange py-3 rounded-md font-bold w-full transition duration-200 hover:bg-unitel-orange hover:text-white">
+                        ກັບຄືນ KYC ທີ່ບໍ່ສຳຄັນ
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Custom Modal for Messages (Instead of alert()) -->
+    <div id="custom-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-lg font-bold mb-3"></h3>
+            <p id="modal-message" class="mb-5"></p>
+            <button onclick="closeModal()"
+                class="bg-unitel-orange text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-unitel-dark-orange transition duration-200">
+                ຕົກລົງ
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Global State & Constants
+        let currentPhoneNumber = '';
+        let simulatedOtp = '';
+        let countdownSeconds = 60;
+        let countdownInterval = null;
+
+        // DOM Elements
+        const PHONE_DISPLAY = document.getElementById('phone-display');
+        const AUTH_STEPS_CONTAINER = document.getElementById('auth-steps-container');
+        const DATA_HEADER = document.getElementById('data-header');
+        const STEP_PHONE = document.getElementById('step-phone');
+        const STEP_OTP = document.getElementById('step-otp');
+        const STEP_DATA_DISPLAY = document.getElementById('step-data-display');
+        const PHONE_INPUT = document.getElementById('phone-number-input');
+        const OTP_INPUT = document.getElementById('otp-input');
+        const OTP_INSTRUCTION = document.getElementById('otp-instruction');
+        const RESEND_LINK = document.getElementById('resend-link');
+        const COUNTDOWN_TIMER = document.getElementById('countdown-timer');
+        const USER_DATA_LIST = document.getElementById('user-data-list');
+
+        // Simulated User Data (based on the image)
+        const userData = {
+            fullName: "SUN XUAN",
+            dob: "23/10/1997",
+            gender: "ເພດຊາຍ",
+            nationality: "China",
+            idNumber: "EN6891382",
+            issueDate: "02/12/2024",
+            expireDate: "02/12/2034",
+            issueCountry: "China",
+            issuer: "ແຂວງ",
+            city: "ນະຄອນຫຼວງ",
+            village: "ບ. ດອນ",
+            address: "ເມືອງທົ່ງ, ກະສິກຳ, ບ. ດອນ",
+        };
+
+        const dataRows = [
+            { label: "ຊື່ ແລະ ນາມສະກຸນ", key: "fullName" },
+            { label: "ວັນເດືອນປີເກີດ", key: "dob" },
+            { label: "ເພດ", key: "gender" },
+            { label: "ສັນຊາດ", key: "nationality" },
+            { label: "ເລກທີ່ເອກະສານ", key: "idNumber" },
+            { label: "ວັນທີອະນຸຍາດ", key: "issueDate" },
+            { label: "ວັນຫມົດອາຍຸ", key: "expireDate" },
+            { label: "ອອກໃຫ້ທີ່ປະເທດ", key: "issueCountry" },
+            { label: "ແຂວງ", key: "issuer" },
+            { label: "ເມືອງ", key: "city" },
+            { label: "ບ້ານ", key: "village" },
+            { label: "ທີ່ຢູ່ລະອຽດປັດຈຸບັນ", key: "address" },
+        ];
+
+
+        // --- Utility Functions (Custom Modal) ---
+
+        function showModal(title, message) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            document.getElementById('custom-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('custom-modal').classList.add('hidden');
+        }
+
+        // --- OTP Countdown Logic ---
+
+        function startCountdown() {
+            countdownSeconds = 60; // Reset timer to 60 seconds
+            RESEND_LINK.classList.add('hidden');
+            COUNTDOWN_TIMER.classList.remove('hidden');
+
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+
+            countdownInterval = setInterval(() => {
+                countdownSeconds--;
+                COUNTDOWN_TIMER.textContent = `(${countdownSeconds} ວິ) ກ່ອນທີ່ຈະຂໍລະຫັດໃໝ່`;
+
+                if (countdownSeconds <= 0) {
+                    clearInterval(countdownInterval);
+                    COUNTDOWN_TIMER.classList.add('hidden');
+                    RESEND_LINK.classList.remove('hidden');
+                    COUNTDOWN_TIMER.textContent = '';
+                }
+            }, 1000);
+        }
+
+        // --- Step Management ---
+
+        function hideAllSteps() {
+            [STEP_PHONE, STEP_OTP, STEP_DATA_DISPLAY, DATA_HEADER].forEach(el => el.classList.add('hidden'));
+            AUTH_STEPS_CONTAINER.classList.add('hidden');
+        }
+
+        function goToOtpStep() {
+            const phone = PHONE_INPUT.value.trim();
+
+            // Simple validation: check if phone is 8 digits (typical Lao mobile number)
+            if (!/^\d{8}$/.test(phone)) {
+                showModal("ຂໍອະໄພ", "ກະລຸນາປ້ອນເບີໂທລະສັບ 8 ຕົວເລກທີ່ຖືກຕ້ອງ");
+                return;
+            }
+
+            currentPhoneNumber = phone;
+
+            // 1. Simulate sending OTP (Generate a random 6-digit OTP for testing)
+            simulatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+            // 2. Update UI for Step 2
+            hideAllSteps();
+            AUTH_STEPS_CONTAINER.classList.remove('hidden');
+            STEP_OTP.classList.remove('hidden');
+
+            // 3. Update text with masked phone number
+            const maskedPhone = phone.substring(0, 3) + ' XXX ' + phone.substring(6, 8);
+            OTP_INSTRUCTION.textContent = `ປ້ອນລະຫັດ 6 ຕົວທີ່ສົ່ງໄປທີ່ 020${maskedPhone}`;
+            PHONE_DISPLAY.textContent = `020 ${maskedPhone}`;
+
+            // 4. Start the countdown timer
+            startCountdown();
+
+            // 5. Inform the user of the simulated OTP (for testing purposes)
+            showModal("ລະຫັດ OTP ຖືກສົ່ງແລ້ວ (ສຳລັບການທົດສອບ)", `ເບີ: 020${phone}\nລະຫັດ OTP ຄື: ${simulatedOtp}`);
+        }
+
+        function resendOtp(event) {
+            event.preventDefault();
+
+            // Simulate sending a new OTP
+            simulatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+            // Restart countdown
+            startCountdown();
+            showModal("ລະຫັດ OTP ຖືກສົ່ງອີກຄັ້ງ", `ລະຫັດ OTP ໃໝ່ຄື: ${simulatedOtp}`);
+        }
+
+        function verifyOtp() {
+            const enteredOtp = OTP_INPUT.value.trim();
+
+            if (!/^\d{6}$/.test(enteredOtp)) {
+                showModal("ຂໍອະໄພ", "ລະຫັດ OTP ຕ້ອງມີ 6 ຕົວເລກ");
+                return;
+            }
+
+            if (enteredOtp === simulatedOtp) {
+                // Success action: Go to Data Display Step
+                goToDataDisplayStep();
+            } else {
+                // Failure
+                showModal("ຜິດພາດ", "ລະຫັດ OTP ບໍ່ຖືກຕ້ອງ. ກະລຸນາລອງໃໝ່.");
+            }
+        }
+
+        function goToDataDisplayStep() {
+            // 1. Hide Auth Steps and show Data Display
+            hideAllSteps();
+            STEP_DATA_DISPLAY.classList.remove('hidden');
+            DATA_HEADER.classList.remove('hidden');
+
+            // 2. Render Data Rows
+            renderUserData();
+
+            // 3. Clear phone graphic (optional, but makes sense for the new screen)
+            PHONE_DISPLAY.textContent = '';
+        }
+
+        function renderUserData() {
+            USER_DATA_LIST.innerHTML = ''; // Clear previous content
+
+            dataRows.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'data-row';
+
+                // Label
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'data-label';
+                labelDiv.textContent = row.label;
+
+                // Value
+                const valueDiv = document.createElement('div');
+                valueDiv.className = 'data-value';
+                valueDiv.textContent = userData[row.key] || '-'; // Use '-' if data is missing
+
+                rowDiv.appendChild(labelDiv);
+                rowDiv.appendChild(valueDiv);
+                USER_DATA_LIST.appendChild(rowDiv);
+            });
+        }
+
+
+        // Initialize: Ensure only the phone step is visible on load
+        document.addEventListener('DOMContentLoaded', () => {
+            hideAllSteps();
+            AUTH_STEPS_CONTAINER.classList.remove('hidden');
+            STEP_PHONE.classList.remove('hidden');
+        });
+
+    </script>
+</body>
+
+</html>
