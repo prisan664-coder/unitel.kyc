@@ -17,6 +17,8 @@
                         'unitel-grey': '#f7f7f7',
                         'success-light': '#e6ffe6', /* Light green for status bar */
                         'success-dark': '#4CAF50',
+                        'warning-light': '#fff3e0', /* Light orange for warning */
+                        'warning-dark': '#ff9800',
                     }
                 }
             }
@@ -162,14 +164,15 @@
             font-weight: 500;
             color: #333;
             flex: 1.5;
-            white-space: normal;
+            word-break: break-word;
+            /* Allow long addresses to wrap */
         }
 
-        .data-header {
+        .app-header {
             background-color: #ff6600;
             color: white;
             padding: 15px 20px;
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
@@ -179,28 +182,58 @@
             align-items: center;
             justify-content: space-between;
             height: 60px;
+            max-width: inherit;
+            /* Inherit max-width from parent */
+            z-index: 50;
         }
 
-        .data-container {
-            padding-top: 60px;
+        /* Ensures the header sits correctly within the main wrapper */
+        .relative.w-full.max-w-lg.mx-auto .app-header {
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: 512px;
+            /* Tailwind's max-w-lg is 512px */
+        }
+
+
+        .content-padding {
+            padding-top: 80px;
             /* Space for the fixed header */
             text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
 
 <body class="bg-unitel-grey flex items-start justify-center min-h-screen">
 
-    <!-- Main Wrapper for the new fixed header layout -->
+    <!-- Main Wrapper: All content is contained here -->
     <div class="relative w-full max-w-lg mx-auto bg-white min-h-screen shadow-xl">
 
-        <!-- Fixed Orange Header for Data Display -->
-        <div id="data-header" class="data-header hidden">
-            <button onclick="showModal('กลับหน้าเดิม', 'คุณสามารถใช้ปุ่มลูกศรเพื่อกลับไปหน้า OTP ได้')"
-                class="text-white text-2xl p-2">
+        <!-- Fixed Header for Steps 3, 4, 5 -->
+        <div id="fixed-header" class="app-header hidden">
+            <!-- Back button: Function is set dynamically in JS based on current step -->
+            <button id="header-back-button" onclick=""
+                class="text-white text-2xl p-2 hover:text-gray-200 transition duration-150">
                 &leftarrow;
             </button>
-            <div class="text-lg font-bold">
+            <div id="header-title" class="text-lg font-bold">
                 eKYC
             </div>
             <!-- Placeholder for Laos Flag -->
@@ -211,10 +244,10 @@
         <!-- Main Content Area -->
         <div class="p-6 sm:p-10 w-full" id="main-content-area">
 
-            <!-- Step 1 & 2 Container (Centered) -->
+            <!-- Steps 1 & 2 Container (Centered with Phone Graphic) -->
             <div id="auth-steps-container"
                 class="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] text-center">
-                <!-- Header: Logo and Flag -->
+                <!-- Header: Logo and Flag (Only visible for Step 1 & 2) -->
                 <div class="flex justify-between items-center mb-6 w-full max-w-sm">
                     <div class="text-2xl font-extrabold text-unitel-orange">e<span class="text-black">KYC</span></div>
                     <!-- Placeholder for Laos Flag -->
@@ -222,7 +255,7 @@
                         class="rounded border border-gray-300">
                 </div>
 
-                <!-- Phone Graphic and Animation -->
+                <!-- Phone Graphic and Animation (Only visible for Step 1 & 2) -->
                 <div class="phone-graphic-container">
                     <div class="ring-animation"></div>
                     <div class="phone-graphic">
@@ -243,7 +276,7 @@
                 </div>
 
                 <!-- Step 1: Phone Number Input -->
-                <div id="step-phone" class="step w-full max-w-sm">
+                <div id="step-1-phone" class="step w-full max-w-sm">
                     <h1 class="text-xl font-bold mt-8 mb-2">ເຂົ້າສູ່ລະບົບດ້ວຍເບີມືຖື</h1>
                     <p class="text-sm text-gray-600 mb-6">
                         ປ້ອນເລກໂທລະສັບຂອງທ່ານ ພວກເຮົາຈະສົ່ງ OTP ສຳຫລັບການຢືນຢັນ
@@ -264,8 +297,15 @@
                 </div>
 
                 <!-- Step 2: OTP Input (Initially Hidden) -->
-                <div id="step-otp" class="step hidden w-full max-w-sm">
-                    <h1 class="text-xl font-bold mt-8 mb-2">ປ້ອນລະຫັດທີ່ໄດ້ຮັບ</h1>
+                <div id="step-2-otp" class="step hidden w-full max-w-sm relative">
+                    <!-- Back button for Step 2 -->
+                    <div class="w-full text-left mb-4 -ml-6 sm:-ml-10">
+                        <button onclick="goToPhoneStep()"
+                            class="text-gray-600 hover:text-unitel-orange text-2xl p-2 transition duration-150">
+                            &leftarrow;
+                        </button>
+                    </div>
+                    <h1 class="text-xl font-bold mb-2">ປ້ອນລະຫັດທີ່ໄດ້ຮັບ</h1>
                     <p id="otp-instruction" class="text-sm text-gray-600 mb-6">
                         ປ້ອນລະຫັດ 6 ຕົວທີ່ສົ່ງໄປທີ່ 020...
                     </p>
@@ -287,16 +327,116 @@
                         ຢືນຢັນ
                     </button>
                 </div>
+            </div>
+            <!-- End of Auth Steps Container -->
 
-                <!-- Help Link (Common to step 1 & 2) -->
-                <a href="#" class="text-blue-500 hover:text-blue-700 text-sm mt-8 block w-full max-w-sm">
-                    ຕ້ອງການການຊ່ວຍເຫຼືອ
-                </a>
+            <!-- Step 3: Registration Required (After successful OTP) -->
+            <div id="step-3-not-registered" class="content-padding hidden text-center">
+
+                <!-- Status Bar: Warning/Not Registered -->
+                <div
+                    class="flex flex-col items-center bg-warning-light text-warning-dark p-6 rounded-lg font-bold mb-10 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-3" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M8.257 3.099c.765-1.365 2.722-1.365 3.487 0a1.75 1.75 0 011.018 1.583v.015a1.75 1.75 0 01-1.018 1.583c-.765 1.365-2.722 1.365-3.487 0a1.75 1.75 0 01-1.018-1.583v-.015a1.75 1.75 0 011.018-1.583zM10 12.5a1 1 0 100-2 1 1 0 000 2z"
+                            clip-rule="evenodd" />
+                        <path d="M10 18a8 8 0 100-16 8 8 0 000 16z" stroke="currentColor" stroke-width="2"
+                            fill="none" />
+                    </svg>
+                    <span class="text-xl">ເບີໂທລະສັບຂອງທ່ານຍັງບໍ່ໄດ້ລົງທະບຽນ</span>
+                    <span id="unregistered-phone" class="text-2xl font-extrabold mt-3 text-gray-800">020 XXXXXXXX</span>
+                </div>
+
+                <h2 class="text-md font-medium text-gray-700 mb-8">
+                    ກະລຸນາດຳເນີນການເພື່ອໃຊ້ງານຕໍ່
+                </h2>
+
+                <!-- Action Buttons -->
+                <div class="space-y-4">
+                    <button onclick="showModal('ປ່ຽນປະເພດ', 'ຫນ້ານີ້ຄວນຈະນຳໄປສູ່ການເລືອກປະເພດລູກຄ້າ')"
+                        class="bg-gray-200 text-gray-700 py-3 rounded-md font-bold w-full transition duration-200 hover:bg-gray-300">
+                        ປ່ຽນປະເພດ
+                    </button>
+                    <button onclick="goToRegistrationForm()"
+                        class="bg-unitel-orange text-white py-3 rounded-md font-bold w-full transition duration-200 hover:bg-unitel-dark-orange">
+                        <span class="mr-2">&#x1F4F1;</span> ລົງທະບຽນ eKYC
+                    </button>
+                    <button onclick="goToOtpStepFromNotRegistered()"
+                        class="bg-white text-unitel-orange border-2 border-unitel-orange py-3 rounded-md font-bold w-full transition duration-200 hover:bg-unitel-orange hover:text-white">
+                        ກັບຄືນ KYC ທີບໍ່ສຳຄັນ
+                    </button>
+                </div>
             </div>
 
-            <!-- Step 3: Data Display (Initially Hidden) -->
-            <div id="step-data-display" class="data-container hidden p-4 sm:p-0 pt-10">
-                <!-- Status Bar: "ສະຖານະ: ຢືນຢັນແລ້ວ" (Status: Confirmed) -->
+            <!-- Step 4: eKYC Registration Form -->
+            <div id="step-4-registration-form" class="content-padding hidden">
+                <h2 class="text-xl font-bold text-gray-800 mb-6 text-center">
+                    ຟອມລົງທະບຽນ eKYC
+                </h2>
+
+                <form id="ekyc-form">
+                    <div class="form-group">
+                        <label for="input-fullName">ຊື່ ແລະ ນາມສະກຸນ</label>
+                        <input type="text" id="input-fullName" required placeholder="ຊື່ເຕັມ">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-dob">ວັນເດືອນປີເກີດ</label>
+                        <input type="date" id="input-dob" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-gender">ເພດ</label>
+                        <select id="input-gender" required>
+                            <option value="">ເລືອກເພດ</option>
+                            <option value="ຊາຍ">ເພດຊາຍ</option>
+                            <option value="ຍິງ">ເພດຍິງ</option>
+                            <option value="ອື່ນໆ">ອື່ນໆ</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-nationality">ສັນຊາດ</label>
+                        <input type="text" id="input-nationality" required placeholder="ຕົວຢ່າງ: ລາວ / China">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-idNumber">ເລກທີ່ເອກະສານ</label>
+                        <input type="text" id="input-idNumber" required placeholder="ເລກທີ່ບັດປະຈຳຕົວ ຫຼື ໜັງສືຜ່ານແດນ">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-expireDate">ວັນທີໝົດອາຍຸ</label>
+                        <input type="date" id="input-expireDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-issueCountry">ອອກໃຫ້ປະເທດ</label>
+                        <input type="text" id="input-issueCountry" required placeholder="ປະເທດທີ່ອອກໃຫ້">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-issuer">ແຂວງ (ຜູ້ອອກໃຫ້)</label>
+                        <input type="text" id="input-issuer" required placeholder="ແຂວງ/ເຈົ້າຫນ້າທີ່ອອກໃຫ້">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-city">ເມືອງ</label>
+                        <input type="text" id="input-city" required placeholder="ເມືອງປັດຈຸບັນ">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-village">ບ້ານ</label>
+                        <input type="text" id="input-village" required placeholder="ບ້ານປັດຈຸບັນ">
+                    </div>
+                    <div class="form-group">
+                        <label for="input-address">ທີ່ຢູ່ລະອຽດປັດຈຸບັນ</label>
+                        <textarea id="input-address" rows="3" required placeholder="ປ້ອນທີ່ຢູ່ລະອຽດ"></textarea>
+                    </div>
+
+                    <button type="submit"
+                        class="bg-unitel-orange text-white py-3 rounded-md font-bold w-full transition duration-200 hover:bg-unitel-dark-orange mt-4">
+                        ລົງທະບຽນ eKYC
+                    </button>
+                </form>
+            </div>
+
+
+            <!-- Step 5: Data Display (Confirmed Successfully) -->
+            <div id="step-5-data-display" class="content-padding hidden p-4 sm:p-0 pt-10">
+                <!-- Status Bar: Success/Confirmed -->
                 <div
                     class="flex items-center bg-success-light text-success-dark p-3 rounded-lg font-bold mb-8 shadow-sm">
                     <!-- Icon SVG: Checkmark -->
@@ -306,7 +446,7 @@
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                             clip-rule="evenodd" />
                     </svg>
-                    <span>ສະຖານະ: ຢືນຢັນແລ້ວ</span>
+                    <span>ສະຖານະ: ຢືນຢັນສຳເລັດ</span>
                 </div>
 
                 <h2 class="text-lg font-bold text-gray-800 mb-4">ຂໍ້ມູນລູກຄ້າ</h2>
@@ -316,24 +456,15 @@
                     <!-- Rows will be injected here by JavaScript -->
                 </div>
 
-                <!-- "ເບິ່ງເພີ່ມເຕີມ" (View More/Details) -->
                 <p class="text-sm text-unitel-orange text-center mb-10 cursor-pointer font-medium">
                     ເບິ່ງເພີ່ມເຕີມ
                 </p>
 
-                <!-- Action Buttons -->
+                <!-- Action Button for Step 5: Go back to Step 1 (Phone Input) -->
                 <div class="space-y-4">
-                    <button
-                        class="bg-gray-300 text-gray-700 py-3 rounded-md font-bold w-full transition duration-200 hover:bg-gray-400">
-                        ປ່ຽນປະເພດ (Change Type)
-                    </button>
-                    <button
+                    <button onclick="goToPhoneStep()"
                         class="bg-unitel-orange text-white py-3 rounded-md font-bold w-full transition duration-200 hover:bg-unitel-dark-orange">
-                        <span class="mr-2">&#x1F4F1;</span> ລົງທະບຽນ eKYC (Register eKYC)
-                    </button>
-                    <button
-                        class="bg-white text-unitel-orange border-2 border-unitel-orange py-3 rounded-md font-bold w-full transition duration-200 hover:bg-unitel-orange hover:text-white">
-                        ກັບຄືນ KYC ທີ່ບໍ່ສຳຄັນ
+                        ກັບຄືນໜ້າທຳອິດ
                     </button>
                 </div>
             </div>
@@ -355,50 +486,57 @@
 
     <script>
         // Global State & Constants
-        let currentPhoneNumber = '';
         let simulatedOtp = '';
         let countdownSeconds = 60;
         let countdownInterval = null;
 
+        // Global User Data State - Initial state is not registered
+        let userData = {
+            phoneNumber: '',
+            fullName: 'N/A',
+            dob: 'N/A',
+            gender: 'N/A',
+            nationality: 'N/A',
+            idNumber: 'N/A',
+            issueDate: 'N/A',
+            expireDate: 'N/A',
+            issueCountry: 'N/A',
+            issuer: 'N/A',
+            city: 'N/A',
+            village: 'N/A',
+            address: 'N/A',
+            isRegistered: false // KEY: Controls flow after OTP
+        };
+
         // DOM Elements
         const PHONE_DISPLAY = document.getElementById('phone-display');
         const AUTH_STEPS_CONTAINER = document.getElementById('auth-steps-container');
-        const DATA_HEADER = document.getElementById('data-header');
-        const STEP_PHONE = document.getElementById('step-phone');
-        const STEP_OTP = document.getElementById('step-otp');
-        const STEP_DATA_DISPLAY = document.getElementById('step-data-display');
+        const FIXED_HEADER = document.getElementById('fixed-header');
+        const HEADER_BACK_BUTTON = document.getElementById('header-back-button');
+        const STEP_PHONE = document.getElementById('step-1-phone');
+        const STEP_OTP = document.getElementById('step-2-otp');
+        const STEP_NOT_REGISTERED = document.getElementById('step-3-not-registered');
+        const STEP_REGISTRATION_FORM = document.getElementById('step-4-registration-form');
+        const STEP_DATA_DISPLAY = document.getElementById('step-5-data-display');
         const PHONE_INPUT = document.getElementById('phone-number-input');
         const OTP_INPUT = document.getElementById('otp-input');
         const OTP_INSTRUCTION = document.getElementById('otp-instruction');
         const RESEND_LINK = document.getElementById('resend-link');
         const COUNTDOWN_TIMER = document.getElementById('countdown-timer');
+        const UNREGISTERED_PHONE = document.getElementById('unregistered-phone');
         const USER_DATA_LIST = document.getElementById('user-data-list');
+        const EKYC_FORM = document.getElementById('ekyc-form');
 
-        // Simulated User Data (based on the image)
-        const userData = {
-            fullName: "SUN XUAN",
-            dob: "23/10/1997",
-            gender: "ເພດຊາຍ",
-            nationality: "China",
-            idNumber: "EN6891382",
-            issueDate: "02/12/2024",
-            expireDate: "02/12/2034",
-            issueCountry: "China",
-            issuer: "ແຂວງ",
-            city: "ນະຄອນຫຼວງ",
-            village: "ບ. ດອນ",
-            address: "ເມືອງທົ່ງ, ກະສິກຳ, ບ. ດອນ",
-        };
 
-        const dataRows = [
+        // Data structure for display (same keys as userData)
+        const dataRowsTemplate = [
             { label: "ຊື່ ແລະ ນາມສະກຸນ", key: "fullName" },
             { label: "ວັນເດືອນປີເກີດ", key: "dob" },
             { label: "ເພດ", key: "gender" },
             { label: "ສັນຊາດ", key: "nationality" },
             { label: "ເລກທີ່ເອກະສານ", key: "idNumber" },
-            { label: "ວັນທີອະນຸຍາດ", key: "issueDate" },
-            { label: "ວັນຫມົດອາຍຸ", key: "expireDate" },
-            { label: "ອອກໃຫ້ທີ່ປະເທດ", key: "issueCountry" },
+            { label: "ວັນທີໝົດອາຍຸ", key: "expireDate" },
+            { label: "ອອກໃຫ້ປະເທດ", key: "issueCountry" },
             { label: "ແຂວງ", key: "issuer" },
             { label: "ເມືອງ", key: "city" },
             { label: "ບ້ານ", key: "village" },
@@ -442,30 +580,83 @@
             }, 1000);
         }
 
-        // --- Step Management ---
+        // --- Step Navigation Functions (Backwards) ---
 
-        function hideAllSteps() {
-            [STEP_PHONE, STEP_OTP, STEP_DATA_DISPLAY, DATA_HEADER].forEach(el => el.classList.add('hidden'));
-            AUTH_STEPS_CONTAINER.classList.add('hidden');
+        function hideAllSteps(showAuthContainer = false) {
+            // Hide all step views
+            [STEP_PHONE, STEP_OTP, STEP_NOT_REGISTERED, STEP_REGISTRATION_FORM, STEP_DATA_DISPLAY].forEach(el => el.classList.add('hidden'));
+
+            // Hide/Show Auth Container (which holds Step 1 & 2)
+            if (showAuthContainer) {
+                AUTH_STEPS_CONTAINER.classList.remove('hidden');
+            } else {
+                AUTH_STEPS_CONTAINER.classList.add('hidden');
+            }
+
+            // Hide fixed header by default for clean slate
+            FIXED_HEADER.classList.add('hidden');
         }
+
+        function updateHeader(title, backFunction) {
+            document.getElementById('header-title').textContent = title;
+            HEADER_BACK_BUTTON.setAttribute('onclick', backFunction);
+            FIXED_HEADER.classList.remove('hidden');
+        }
+
+        function goToPhoneStep() {
+            // Navigates from any step back to Step 1 (Phone Input)
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+
+            // Reset state
+            OTP_INPUT.value = '';
+            PHONE_INPUT.value = userData.phoneNumber.substring(3); // Keep only 8 digits if possible
+            userData.phoneNumber = '';
+
+            hideAllSteps(true);
+            STEP_PHONE.classList.remove('hidden');
+            PHONE_DISPLAY.textContent = '020 XXX XXXX';
+        }
+
+        function goToOtpStepFromNotRegistered() {
+            // Navigates from Step 3 back to Step 2
+            hideAllSteps(true);
+            STEP_OTP.classList.remove('hidden');
+
+            // Restart countdown logic to show 'Resend' link
+            clearInterval(countdownInterval);
+            COUNTDOWN_TIMER.classList.add('hidden');
+            RESEND_LINK.classList.remove('hidden');
+
+            OTP_INPUT.value = '';
+        }
+
+        function goToRegistrationRequiredFromForm() {
+            // Navigates from Step 4 back to Step 3
+            hideAllSteps();
+            STEP_NOT_REGISTERED.classList.remove('hidden');
+            updateHeader('eKYC', 'goToOtpStepFromNotRegistered()');
+        }
+
+        // --- Step Navigation Functions (Forwards) ---
 
         function goToOtpStep() {
             const phone = PHONE_INPUT.value.trim();
 
-            // Simple validation: check if phone is 8 digits (typical Lao mobile number)
             if (!/^\d{8}$/.test(phone)) {
                 showModal("ຂໍອະໄພ", "ກະລຸນາປ້ອນເບີໂທລະສັບ 8 ຕົວເລກທີ່ຖືກຕ້ອງ");
                 return;
             }
 
-            currentPhoneNumber = phone;
+            userData.phoneNumber = '020' + phone;
 
             // 1. Simulate sending OTP (Generate a random 6-digit OTP for testing)
             simulatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
             // 2. Update UI for Step 2
-            hideAllSteps();
-            AUTH_STEPS_CONTAINER.classList.remove('hidden');
+            hideAllSteps(true);
             STEP_OTP.classList.remove('hidden');
 
             // 3. Update text with masked phone number
@@ -482,11 +673,7 @@
 
         function resendOtp(event) {
             event.preventDefault();
-
-            // Simulate sending a new OTP
             simulatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-            // Restart countdown
             startCountdown();
             showModal("ລະຫັດ OTP ຖືກສົ່ງອີກຄັ້ງ", `ລະຫັດ OTP ໃໝ່ຄື: ${simulatedOtp}`);
         }
@@ -500,31 +687,104 @@
             }
 
             if (enteredOtp === simulatedOtp) {
-                // Success action: Go to Data Display Step
-                goToDataDisplayStep();
+                // Stop the countdown
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+
+                // Flow decision based on registration status
+                if (userData.isRegistered) {
+                    goToDataDisplayStep();
+                } else {
+                    goToRegistrationRequired();
+                }
             } else {
-                // Failure
                 showModal("ຜິດພາດ", "ລະຫັດ OTP ບໍ່ຖືກຕ້ອງ. ກະລຸນາລອງໃໝ່.");
             }
         }
 
+        function goToRegistrationRequired() {
+            // Navigates to Step 3: Not Registered screen
+            hideAllSteps();
+            STEP_NOT_REGISTERED.classList.remove('hidden');
+
+            // Update phone number display
+            const phone = userData.phoneNumber.substring(3);
+            const maskedPhone = phone.substring(0, 3) + ' XXX ' + phone.substring(6, 8);
+            UNREGISTERED_PHONE.textContent = `020 ${maskedPhone}`;
+
+            // Update fixed header and back action
+            updateHeader('eKYC', 'goToOtpStepFromNotRegistered()');
+        }
+
+        function goToRegistrationForm() {
+            // Navigates to Step 4: Registration Form
+            hideAllSteps();
+            STEP_REGISTRATION_FORM.classList.remove('hidden');
+
+            // Update fixed header and back action
+            updateHeader('ລົງທະບຽນ eKYC', 'goToRegistrationRequiredFromForm()');
+        }
+
+        function submitRegistration(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            // Simple client-side validation check (Tailwind required attribute handles most)
+            const formElements = EKYC_FORM.elements;
+            let allValid = true;
+
+            // Collect and update user data
+            userData.fullName = formElements['input-fullName'].value;
+            userData.dob = formElements['input-dob'].value;
+            userData.gender = formElements['input-gender'].value;
+            userData.nationality = formElements['input-nationality'].value;
+            userData.idNumber = formElements['input-idNumber'].value;
+            // Assuming issueDate is today for simplicity, but user only inputs expireDate
+            userData.issueDate = new Date().toLocaleDateString('lo-LA');
+            userData.expireDate = formElements['input-expireDate'].value;
+            userData.issueCountry = formElements['input-issueCountry'].value;
+            userData.issuer = formElements['input-issuer'].value;
+            userData.city = formElements['input-city'].value;
+            userData.village = formElements['input-village'].value;
+            userData.address = formElements['input-address'].value;
+
+            // Check if all fields are populated (simple check for required attributes)
+            for (let i = 0; i < formElements.length; i++) {
+                if (formElements[i].tagName !== 'BUTTON' && formElements[i].required && formElements[i].value === '') {
+                    allValid = false;
+                    break;
+                }
+            }
+
+            if (allValid) {
+                userData.isRegistered = true; // Set status to confirmed
+
+                showModal("ສຳເລັດ", "ການລົງທະບຽນ eKYC ສໍາເລັດແລ້ວ!");
+
+                // Navigate to the Confirmed Data Display screen
+                goToDataDisplayStep();
+            } else {
+                showModal("ຜິດພາດ", "ກະລຸນາປ້ອນຂໍ້ມູນໃຫ້ຄົບຖ້ວນທຸກຊ່ອງ.");
+            }
+        }
+
         function goToDataDisplayStep() {
-            // 1. Hide Auth Steps and show Data Display
+            // Navigates to Step 5: Confirmed Data Display
             hideAllSteps();
             STEP_DATA_DISPLAY.classList.remove('hidden');
-            DATA_HEADER.classList.remove('hidden');
 
-            // 2. Render Data Rows
+            // Update fixed header and back action
+            updateHeader('eKYC', 'goToPhoneStep()'); // Step 5 back button goes to Step 1
+
+            // Render Data Rows using the newly registered user data
             renderUserData();
-
-            // 3. Clear phone graphic (optional, but makes sense for the new screen)
-            PHONE_DISPLAY.textContent = '';
         }
 
         function renderUserData() {
             USER_DATA_LIST.innerHTML = ''; // Clear previous content
 
-            dataRows.forEach(row => {
+            dataRowsTemplate.forEach(row => {
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'data-row';
 
@@ -533,10 +793,45 @@
                 labelDiv.className = 'data-label';
                 labelDiv.textContent = row.label;
 
-                // Value
+                // Value (Pull from global userData)
                 const valueDiv = document.createElement('div');
                 valueDiv.className = 'data-value';
-                valueDiv.textContent = userData[row.key] || '-'; // Use '-' if data is missing
+                let value = userData[row.key] || '-';
+
+                // Format dates for display if they are not N/A
+                if ((row.key === 'dob' || row.key === 'expireDate') && value !== 'N/A') {
+                    try {
+                        value = new Date(value).toLocaleDateString('lo-LA', {
+                            year: 'numeric',
+                            month: 'numeric',
+                            day: 'numeric'
+                        });
+                    } catch (e) {
+                        // Keep original value if date parsing fails
+                    }
+                }
+
+                // For issueDate, use the stored value which is set upon submission
+                if (row.key === 'issueDate' && value === 'N/A') {
+                    // Set a placeholder or today's date if not set during registration
+                    value = new Date().toLocaleDateString('lo-LA', {
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric'
+                    });
+                }
+
+                // For phone number
+                if (row.key === 'idNumber') {
+                    // Inject Phone number for visual reference (since it's the anchor)
+                    const phoneElement = document.createElement('div');
+                    phoneElement.className = 'text-xs text-gray-500 mt-1';
+                    phoneElement.textContent = `ເບີໂທ: ${userData.phoneNumber}`;
+                    valueDiv.appendChild(phoneElement);
+                }
+
+
+                valueDiv.textContent = value;
 
                 rowDiv.appendChild(labelDiv);
                 rowDiv.appendChild(valueDiv);
@@ -544,11 +839,15 @@
             });
         }
 
+        // --- Event Listeners and Initialization ---
+
+        // Attach event listener for form submission
+        EKYC_FORM.addEventListener('submit', submitRegistration);
 
         // Initialize: Ensure only the phone step is visible on load
         document.addEventListener('DOMContentLoaded', () => {
-            hideAllSteps();
-            AUTH_STEPS_CONTAINER.classList.remove('hidden');
+            // Set initial state: only phone step is visible
+            hideAllSteps(true);
             STEP_PHONE.classList.remove('hidden');
         });
 
